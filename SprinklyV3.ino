@@ -17,14 +17,14 @@ const byte rs = 13, en = 12, d4 = 11, d5 = 10, d6 = 9, d7 = 8;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 // Setup of pins
-const int clockPin = A2;  // Pin CL on Relay board
+const int clockPin = A0;  // Pin CL on Relay board
 const int latchPin = A1;  // Pin LT on Relay board
-const int dataPin = A0;   // Pin DS on Relay board
+const int dataPin = A2;   // Pin DS on Relay board
 const byte powerPin = 3;
 const byte UpPin = 4;
 const byte DownPin = 7;
-const byte AcceptPin = 6;
-const byte AbortPin = 5;
+const byte AcceptPin = 5;
+const byte AbortPin = 6;
 
 byte data = 0;  //0-255, value for relays
 int menu = 0; //value for which menu is shown
@@ -80,18 +80,18 @@ int Sprinkler4State = 1;
 int Sprinkler5State = 1;
 int Sprinkler6State = 1;
 int Sprinkler7State = 1;
-int Sprinkler8State = 1;
+int Sprinkler8State = 0;
 int SprinklerStates[] = {Sprinkler1State, Sprinkler2State, Sprinkler3State, Sprinkler4State, Sprinkler5State, Sprinkler6State, Sprinkler7State, Sprinkler8State};
-int Sprinkler1Time = 4; // Watering time in minutes
-int Sprinkler2Time = 4;
-int Sprinkler3Time = 4;
-int Sprinkler4Time = 4;
-int Sprinkler5Time = 4;
-int Sprinkler6Time = 4;
-int Sprinkler7Time = 4;
-int Sprinkler8Time = 4;
+int Sprinkler1Time = 30; // Watering time in minutes
+int Sprinkler2Time = 45;
+int Sprinkler3Time = 30;
+int Sprinkler4Time = 30;
+int Sprinkler5Time = 40;
+int Sprinkler6Time = 20;
+int Sprinkler7Time = 45;
+int Sprinkler8Time = 1;
 bool ForcedWatering = 0;
-bool LongWatering = 1;
+bool LongWatering = 0;
 
 unsigned long MenuTime = 0;
 bool LongDay = 0; // Flag to check if it's a long watering day or not.
@@ -997,9 +997,137 @@ void loop() {
     } //end of (LongWatering == 1 && LongDay == 1)
   } //end of (Hour > 18 || Hour < 6)
 
+
+
   // FORCED WATERING SECTION
-  if(ForcedWatering == 1){ //Watering cycle that runs every active section for a shorter time, directly when activated.
+  if(ForcedWatering == 1){ //Watering cycle that runs every active section directly when activated.
+
+
+
+
     digitalWrite(powerPin, HIGH); // Turn on 24V to solenoids/relays
+    
+
+    // Sprinkler 7
+    if (SprinklerStates[6] == 1 && data == 0){  //Startar bevattningen
+      LCD = 255; // Forces LCD refresh.
+      data = 64;
+      digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+      shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+      digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+      Sprinkler7StartTime = millis() / 1000;
+      Sprinkler7Finish = Sprinkler7StartTime + ((Sprinkler7Time) * 60);
+      lcd.clear();
+    }
+    while (SprinklerStates[6] == 1 && data == 64){  //Shows remaining time and reads abort button
+      bool abort = digitalRead(AbortPin);
+      if (abort == 0){
+        data = 0;
+        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+        SprinklerStates[6] = -1;
+        lcd.clear();
+        delay(500);
+      }
+      lcd.setCursor(0, 0);
+      lcd.print("Section 7 started");
+      lcd.setCursor(0, 1);
+      lcd.print("Seconds remaining: ");
+      lcd.setCursor(0, 2);
+      lcd.print(Sprinkler7TimeRemaining);
+      lcd.setCursor(0, 3);
+      lcd.print("Press decr to abort");
+      Sprinkler7TimeRemaining = Sprinkler7Finish - (millis()/1000);
+      if (Sprinkler7TimeRemaining < 1){  // In the while loop, watches remaining time and turns off section when done.
+        data = 0;
+        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+        SprinklerStates[6] = -1;                         //-1 as to not get caught again until full reset.
+      }
+    }
+
+        // Sprinkler 6
+    if (SprinklerStates[5] == 1 && data == 0){  //Startar bevattningen
+      LCD = 255; // Forces LCD refresh.
+      data = 32;
+      digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+      shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+      digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+      Sprinkler6StartTime = millis() / 1000;
+      Sprinkler6Finish = Sprinkler6StartTime + ((Sprinkler6Time) * 60);
+      lcd.clear();
+    }
+    while (SprinklerStates[5] == 1 && data == 32){  //Shows remaining time and reads abort button
+      bool abort = digitalRead(AbortPin);
+      if (abort == 0){
+        data = 0;
+        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+        SprinklerStates[5] = -1;
+        lcd.clear();
+        delay(500);
+      }
+      lcd.setCursor(0, 0);
+      lcd.print("Section 6 started");
+      lcd.setCursor(0, 1);
+      lcd.print("Seconds remaining: ");
+      lcd.setCursor(0, 2);
+      lcd.print(Sprinkler6TimeRemaining);
+      lcd.setCursor(0, 3);
+      lcd.print("Press decr to abort");
+      Sprinkler6TimeRemaining = Sprinkler6Finish - (millis()/1000);
+      if (Sprinkler6TimeRemaining < 1){  // In the while loop, watches remaining time and turns off section when done.
+        data = 0;
+        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+        SprinklerStates[5] = -1;                         //-1 as to not get caught again until full reset.
+      }
+    }
+
+        // Sprinkler 5
+    if (SprinklerStates[4] == 1 && data == 0){  //Startar bevattningen
+      LCD = 255; // Forces LCD refresh.
+      data = 16;
+      digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+      shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+      digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+      Sprinkler5StartTime = millis() / 1000;
+      Sprinkler5Finish = Sprinkler5StartTime + ((Sprinkler5Time) * 60);
+      lcd.clear();
+    }
+    while (SprinklerStates[4] == 1 && data == 16){  //Shows remaining time and reads abort button
+      bool abort = digitalRead(AbortPin);
+      if (abort == 0) {
+        data = 0;
+        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+        SprinklerStates[4] = -1;
+        lcd.clear();
+        delay(500);
+      }
+      lcd.setCursor(0, 0);
+      lcd.print("Section 5 started");
+      lcd.setCursor(0, 1);
+      lcd.print("Seconds remaining: ");
+      lcd.setCursor(0, 2);
+      lcd.print(Sprinkler5TimeRemaining);
+      lcd.setCursor(0, 3);
+      lcd.print("Press decr to abort");
+      Sprinkler5TimeRemaining = Sprinkler5Finish - (millis()/1000);
+      if (Sprinkler5TimeRemaining < 1){  // In the while loop, watches remaining time and turns off section when done.
+        data = 0;
+        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
+        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
+        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
+        SprinklerStates[4] = -1;                         //-1 as to not get caught again until full reset.
+      }
+    }
+    
     // Sprinkler 1
     if (SprinklerStates[0] == 1 && data == 0){  //Startar bevattningen
       LCD = 255; // Forces LCD refresh.
@@ -1008,7 +1136,7 @@ void loop() {
       shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
       digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
       Sprinkler1StartTime = millis() / 1000;
-      Sprinkler1Finish = Sprinkler1StartTime + ((Sprinkler1Time/4) * 60);
+      Sprinkler1Finish = Sprinkler1StartTime + ((Sprinkler1Time) * 60);
       lcd.clear();
     }
     while (SprinklerStates[0] == 1 && data == 1){  //Shows remaining time and reads abort button
@@ -1048,7 +1176,7 @@ void loop() {
       shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
       digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
        Sprinkler2StartTime = millis() / 1000;
-       Sprinkler2Finish = Sprinkler2StartTime + ((Sprinkler2Time/4) * 60);
+       Sprinkler2Finish = Sprinkler2StartTime + ((Sprinkler2Time) * 60);
        lcd.clear();
     }
     while (SprinklerStates[1] == 1 && data == 2){  //Shows remaining time and reads abort button
@@ -1088,7 +1216,7 @@ void loop() {
       shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
       digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
       Sprinkler3StartTime = millis() / 1000;
-      Sprinkler3Finish = Sprinkler3StartTime + ((Sprinkler3Time/4) * 60);
+      Sprinkler3Finish = Sprinkler3StartTime + ((Sprinkler3Time) * 60);
       lcd.clear();
     }
     while (SprinklerStates[2] == 1 && data == 4){  //Shows remaining time and reads abort button
@@ -1128,7 +1256,7 @@ void loop() {
       shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
       digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
       Sprinkler4StartTime = millis() / 1000;
-      Sprinkler4Finish = Sprinkler4StartTime + ((Sprinkler4Time/4) * 60);
+      Sprinkler4Finish = Sprinkler4StartTime + ((Sprinkler4Time) * 60);
       lcd.clear();
     }
     while (SprinklerStates[3] == 1 && data == 8){  //Shows remaining time and reads abort button
@@ -1160,126 +1288,6 @@ void loop() {
       }
     }
 
-    // Sprinkler 5
-    if (SprinklerStates[4] == 1 && data == 0){  //Startar bevattningen
-      LCD = 255; // Forces LCD refresh.
-      data = 16;
-      digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-      shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-      digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-      Sprinkler5StartTime = millis() / 1000;
-      Sprinkler5Finish = Sprinkler5StartTime + ((Sprinkler5Time/4) * 60);
-      lcd.clear();
-    }
-    while (SprinklerStates[4] == 1 && data == 16){  //Shows remaining time and reads abort button
-      bool abort = digitalRead(AbortPin);
-      if (abort == 0) {
-        data = 0;
-        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-        SprinklerStates[4] = -1;
-        lcd.clear();
-        delay(500);
-      }
-      lcd.setCursor(0, 0);
-      lcd.print("Section 5 started");
-      lcd.setCursor(0, 1);
-      lcd.print("Seconds remaining: ");
-      lcd.setCursor(0, 2);
-      lcd.print(Sprinkler5TimeRemaining);
-      lcd.setCursor(0, 3);
-      lcd.print("Press decr to abort");
-      Sprinkler5TimeRemaining = Sprinkler5Finish - (millis()/1000);
-      if (Sprinkler5TimeRemaining < 1){  // In the while loop, watches remaining time and turns off section when done.
-        data = 0;
-        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-        SprinklerStates[4] = -1;                         //-1 as to not get caught again until full reset.
-      }
-    }
-
-    // Sprinkler 6
-    if (SprinklerStates[5] == 1 && data == 0){  //Startar bevattningen
-      LCD = 255; // Forces LCD refresh.
-      data = 32;
-      digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-      shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-      digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-      Sprinkler6StartTime = millis() / 1000;
-      Sprinkler6Finish = Sprinkler6StartTime + ((Sprinkler6Time/4) * 60);
-      lcd.clear();
-    }
-    while (SprinklerStates[5] == 1 && data == 32){  //Shows remaining time and reads abort button
-      bool abort = digitalRead(AbortPin);
-      if (abort == 0){
-        data = 0;
-        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-        SprinklerStates[5] = -1;
-        lcd.clear();
-        delay(500);
-      }
-      lcd.setCursor(0, 0);
-      lcd.print("Section 6 started");
-      lcd.setCursor(0, 1);
-      lcd.print("Seconds remaining: ");
-      lcd.setCursor(0, 2);
-      lcd.print(Sprinkler6TimeRemaining);
-      lcd.setCursor(0, 3);
-      lcd.print("Press decr to abort");
-      Sprinkler6TimeRemaining = Sprinkler6Finish - (millis()/1000);
-      if (Sprinkler6TimeRemaining < 1){  // In the while loop, watches remaining time and turns off section when done.
-        data = 0;
-        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-        SprinklerStates[5] = -1;                         //-1 as to not get caught again until full reset.
-      }
-    }
-
-    // Sprinkler 7
-    if (SprinklerStates[6] == 1 && data == 0){  //Startar bevattningen
-      LCD = 255; // Forces LCD refresh.
-      data = 64;
-      digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-      shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-      digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-      Sprinkler7StartTime = millis() / 1000;
-      Sprinkler7Finish = Sprinkler7StartTime + ((Sprinkler7Time/4) * 60);
-      lcd.clear();
-    }
-    while (SprinklerStates[6] == 1 && data == 64){  //Shows remaining time and reads abort button
-      bool abort = digitalRead(AbortPin);
-      if (abort == 0){
-        data = 0;
-        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-        SprinklerStates[6] = -1;
-        lcd.clear();
-        delay(500);
-      }
-      lcd.setCursor(0, 0);
-      lcd.print("Section 7 started");
-      lcd.setCursor(0, 1);
-      lcd.print("Seconds remaining: ");
-      lcd.setCursor(0, 2);
-      lcd.print(Sprinkler7TimeRemaining);
-      lcd.setCursor(0, 3);
-      lcd.print("Press decr to abort");
-      Sprinkler7TimeRemaining = Sprinkler7Finish - (millis()/1000);
-      if (Sprinkler7TimeRemaining < 1){  // In the while loop, watches remaining time and turns off section when done.
-        data = 0;
-        digitalWrite(latchPin, LOW);                  // Latch is low while we load new data to register
-        shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
-        digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
-        SprinklerStates[6] = -1;                         //-1 as to not get caught again until full reset.
-      }
-    }
-
     // Sprinkler 8
     if (SprinklerStates[7] == 1 && data == 0){  //Startar bevattningen
       LCD = 255; // Forces LCD refresh.
@@ -1288,7 +1296,7 @@ void loop() {
       shiftOut(dataPin, clockPin, MSBFIRST, data);  // Load the data to register using ShiftOut function
       digitalWrite(latchPin, HIGH);                 // Toggle latch to present the new data on register outputs
       Sprinkler8StartTime = millis() / 1000;
-      Sprinkler8Finish = Sprinkler8StartTime + ((Sprinkler8Time/4) * 60);
+      Sprinkler8Finish = Sprinkler8StartTime + ((Sprinkler8Time) * 60);
       lcd.clear();
     }
     while (SprinklerStates[7] == 1 && data == 128){  //Shows remaining time and reads abort button
@@ -1337,7 +1345,7 @@ void loop() {
     lcd.print(SprinklerStates[5]);
     lcd.print(SprinklerStates[6]);
     lcd.print(SprinklerStates[7]);
-    delay(2500);
+    delay(1500);
     ForcedWatering = 0;
     lcd.clear();
   }
